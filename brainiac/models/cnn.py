@@ -11,7 +11,8 @@ class SimpleCNN(nn.Module):
         self.pool = nn.MaxPool3d(kernel_size=7, stride=7)
         self.fl = nn.Flatten()
         self.fc1 = nn.Linear(183872, 1024)  # 98304 
-        self.fc2 = nn.Linear(1024, num_classes)
+        self.fc2 = nn.Linear(1024, 1)
+        self.activation = nn.ReLU()
 
     def forward(self, out):
         out = self.conv(out)
@@ -19,5 +20,6 @@ class SimpleCNN(nn.Module):
         out = self.fl(out)
         out = self.fc1(out)
         out = self.fc2(out)
+        out = self.activation(out)
         return out
 

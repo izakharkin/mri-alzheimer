@@ -6,7 +6,7 @@ from PIL import Image
 import cv2
 from scipy.ndimage.interpolation import rotate 
 
-from model_selection import ManualGroupKFold
+from .model_selection import ManualGroupKFold
 from sklearn.preprocessing import LabelEncoder
     
 def extract_groups(df, names):
@@ -25,17 +25,26 @@ def train_test_split_df(df, classes, random_state=42):
     '''
     mapper = {n:i for i, n in enumerate(classes)}
     df = encoder_it(extract_groups(df, classes), mapper)
+
+    val_map = df['Group'].value_counts()
+    inds = np.argsort(val_map.keys().to_list())
+    levels = np.array(val_map.to_list())[inds]
+    levels = [0.0]+[levels[:i+1].sum() for i in range(len(levels))]
+    levels /= levels[-1]
+    levels *= 100
+
     cv = ManualGroupKFold(n_splits=3, random_state=random_state)
     train_idx, test_idx = list(cv.split(df['Image Data ID'], df['Group'].values, df['Subject'].values))[0]
     df_train, df_test = df.iloc[train_idx], df.iloc[test_idx]
-    return df_train, df_test
+    return df_train, df_test, levels
 
 
 class ADNIClassificationDataset(data.Dataset):
     def __init__(
         self, 
         dataset_csv, 
-        method='train', 
+        levels,
+        method='train',
         target_size=(96, 96), 
         frames_to_take=128,
         train=False
@@ -50,6 +59,8 @@ class ADNIClassificationDataset(data.Dataset):
         self.frames_to_take = frames_to_take
         self.images_path = '/home/basimova_nf/ADNI-processed/images/'
         self.train = train
+        self.std = torch.tensor([0.1])
+        self.levels = levels
 
 
     def __len__(self):
@@ -93,6 +104,6 @@ class ADNIClassificationDataset(data.Dataset):
             new_im = np.abs(np.flip(new_im, axis=np.random.randint(low=0, high=2, size=1)[0]))
         new_im = new_im[None,:]  # np.moveaxis(new_im, 0, -1)[None, :]
             
-        if self.method == 'test': return new_im  
-        # maybe better to delete Patient 
-        return torch.Tensor(new_im), row['Group'] #,f'{self.images_path}{filename}.npy', index
+        if self.method == 'test': return new_im
+        target = self.levels[row['Group']] + torch.abs(torch.normal(0, self.std))
+        return torch.Tensor(new_im), target, row['Group'] #,f'{self.images_path}{filename}.npy', index

@@ -24,12 +24,13 @@ class AlexNet3D(nn.Module):
         )
         self.classifier = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(3072, 4096),  # 1024
+            nn.Linear(3072, 1024),
             nn.ReLU(inplace=True),
             nn.Dropout(),
-            nn.Linear(4096, 4096),
+            nn.Linear(1024, 1024),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, num_classes),
+            nn.Linear(1024, 1),
+            # nn.ReLU(inplace=True)
         )
 
     def forward(self, x):
