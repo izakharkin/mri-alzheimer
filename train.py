@@ -235,7 +235,7 @@ def train(args):
     best_acc = 0
     best_epoch = -1
     for epoch in range(init_epoch, args.num_epoch):
-#         train_epoch(epoch, model, train_loader, optimizer, args)
+        train_epoch(epoch, model, train_loader, optimizer, args)
         
         if scheduler:
             scheduler.step()
