@@ -47,6 +47,7 @@ class ADNIClassificationDataset(data.Dataset):
         method='train',
         target_size=(96, 96), 
         frames_to_take=128,
+        images_path='/home/ADNI-processed/images/',
         train=False
 #         start_frame=50,
 #         end_frame=-50
@@ -57,7 +58,7 @@ class ADNIClassificationDataset(data.Dataset):
 #         self.start_frame = start_frame
 #         self.end_frame = end_frame
         self.frames_to_take = frames_to_take
-        self.images_path = '/home/basimova_nf/ADNI-processed/images/'
+        self.images_path = images_path
         self.train = train
         self.std = torch.tensor([0.1])
         self.levels = levels

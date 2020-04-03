@@ -23,14 +23,13 @@ class AlexNet3D(nn.Module):
             nn.MaxPool3d(kernel_size=3, stride=2),
         )
         self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(3072, 1024),
+#             nn.Dropout(),
+            nn.Linear(3072, 4096),  # 1024
             nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(1024, 1024),
+#             nn.Dropout(),
+            nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Linear(1024, 1),
-            # nn.ReLU(inplace=True)
+            nn.Linear(4096, 1),
         )
 
     def forward(self, x):

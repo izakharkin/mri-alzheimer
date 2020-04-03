@@ -26,7 +26,7 @@ def save_model_epoch(model, model_dir, current_epoch, last_best_epoch=None):
             os.system('rm {}'.format(old_model_state_file))
 
     
-def load_model(model, path):
-    params = torch.load(path)
+def load_model(model, path, device='cpu'):
+    params = torch.load(path, map_location=device)
     model.load_state_dict(params['model_state_dict'])
     return model, params['epoch']
