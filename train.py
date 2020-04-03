@@ -117,7 +117,7 @@ def train_epoch(epoch, model, data_loader, optimizer, args):
         if batch_idx % args.train_print_every == 0:
             logging.info('Train Epoch: {:04d} | Iter: [{:04d} / {:04d} ({:02d}%)] | Loss: {:.6f}'.format(
                 epoch, batch_idx * len(data), data_loader.sampler.num_samples,
-                100. * batch_idx / len(data_loader), loss.item()))
+                int(100. * batch_idx / len(data_loader)), loss.item()))
     
     y_true = np.concatenate(y_true)
     y_pred = np.concatenate(y_pred)
