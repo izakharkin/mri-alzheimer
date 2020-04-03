@@ -19,6 +19,7 @@ from brainiac.log_helper import *
 
 import logging
 
+from sklearn.metrics import roc_auc_score, accuracy_score
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -26,9 +27,11 @@ def parse_args():
     parser.add_argument('--model', type=str,
                         required=True, help='Network archetecture')
     parser.add_argument('--data_path', type=str,
-                        default='/home/ADNI-processed/data.csv', help='Full path to a data .csv file')
+                        default='../ADNI-processed/data.csv', help='Full path to a data .csv file')
+    parser.add_argument('--images_path', type=str,
+                        default='../ADNI-processed/images/', help='Full path to a data .csv file')
     parser.add_argument('--classes', type=str,
-                        default="['CN', 'MCI', 'AD']", help='Classes for experiment')
+                        default="['CN', 'AD']", help='Classes for experiment')
     
     parser.add_argument('--num_epoch', type=int,
                         default=200, help='Number of epoch')
@@ -62,8 +65,7 @@ def parse_args():
                         default=0.1, help='Scheduler\'s gamma')
     
     parser.add_argument('--device', type=str,
-                        default='cuda', help='Computing device', 
-                        choices=['cpu', 'cuda'])
+                        default='cuda', help='Computing device')
     
     parser.add_argument('--use_pretrain', type=bool,
                         default=False, help='Use pretrain model')
@@ -80,47 +82,74 @@ def parse_args():
         args.lr, int(args.use_scheduler), int(args.use_sampling))
     args.save_dir = save_dir
     
+    if args.device < 'cpu':
+        args.device = 'cuda:' + args.device
+    
     return args
 
+def get_metrics(y_true, pred):
+    y_prob = np.exp(pred)
+    y_prob /= y_prob.sum(axis=1, keepdims=True)
+    y_pred = np.argmax(pred, axis=1)
+    
+    roc_auc = roc_auc_score(y_true, y_prob[:, 1])
+    acc = accuracy_score(y_true, y_pred)
+    correct = (y_true == y_pred).sum()
+    
+    return correct, acc, roc_auc
+    
 
 def train_epoch(epoch, model, data_loader, optimizer, args):
     model.train()
-    correct = 0
-    num_samples = 0
+    y_true = []
+    y_pred = []
+    
     for batch_idx, (data, target) in enumerate(data_loader):
         optimizer.zero_grad()
         output = model(data.to(args.device))
         loss = F.cross_entropy(output, target.to(args.device))
-        pred = output.max(1)[1]
-        correct += pred.eq(target.to(args.device)).sum().item()
-        num_samples += len(target)
         loss.backward()
         optimizer.step()
+        
+        y_true.append(target.detach().cpu().numpy())
+        y_pred.append(output.detach().cpu().numpy())
+        
         if batch_idx % args.train_print_every == 0:
-            logging.info('Train Epoch: {:04d}  [{:04d} / {:04d} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            logging.info('Train Epoch: {:04d} | Iter: [{:04d} / {:04d} ({:02d}%)] | Loss: {:.6f}'.format(
                 epoch, batch_idx * len(data), data_loader.sampler.num_samples,
                 100. * batch_idx / len(data_loader), loss.item()))
-    logging.info('Train Epoch: {:04d} Accuracy: {}/{} ({:.0f}%)'.format(
-        epoch, correct, num_samples, 100. * correct / num_samples))
+    
+    y_true = np.concatenate(y_true)
+    y_pred = np.concatenate(y_pred)
+    num_samples = len(y_true)
+    correct, acc, roc_auc = get_metrics(y_true, y_pred)
 
-def test_epoch(model, args, data_loader, name_set):
+    
+    logging.info('Train Epoch: {:04d} | Accuracy: {}/{} ({:.3f}) | RocAuc: {:.3f}'.format(
+        epoch, correct, num_samples, acc, roc_auc))
+
+def test_epoch(epoch, model, data_loader, args):
     model.eval()
     test_loss = 0
-    correct = 0
-    num_samples = 0
+    y_true = []
+    y_pred = []
     with torch.no_grad():
         for data, target in data_loader:
             output = model(data.to(args.device))
             test_loss += F.cross_entropy(output, target.to(args.device), reduction='sum').item() # sum up batch loss
-            pred = output.max(1)[1] # get the index of the max log-probability
-            correct += pred.eq(target.to(args.device)).sum().item()
-            num_samples += len(target)
+            
+            y_true.append(target.cpu().numpy())
+            y_pred.append(output.cpu().numpy())
 
-    test_loss /= num_samples  # len(data_loader.dataset)
-    logging.info('{} set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'.format(
-        name_set, test_loss, correct, num_samples,
-        100. * correct / num_samples))
-    return correct / num_samples
+    y_true = np.concatenate(y_true)
+    y_pred = np.concatenate(y_pred)
+    num_samples = len(y_true)
+    correct, acc, roc_auc = get_metrics(y_true, y_pred)
+    test_loss /= num_samples
+    
+    logging.info('Test Epoch: {:04d} | Average loss: {:.4f} | Accuracy: {}/{} ({:.3f}) | RocAuc: {:.3f}'.format(  
+        epoch, test_loss, correct, num_samples, acc, roc_auc))
+    return acc
 
 def make_sampler(labels, mode='over'):
     class_sample_count = np.unique(labels, return_counts=True)[1]
@@ -163,8 +192,8 @@ def train(args):
         labels = df_train['Group'].values
         sampler = make_sampler(labels, args.sampling_type)
         
-    train_dataset = ADNIClassificationDataset(df_train, train=args.use_augmentation)
-    test_dataset = ADNIClassificationDataset(df_test, train=False)
+    train_dataset = ADNIClassificationDataset(df_train, train=args.use_augmentation, images_path=args.images_path)
+    test_dataset = ADNIClassificationDataset(df_test, train=False, images_path=args.images_path)
         
     shuffle = True if sampler is None else False
     train_loader = DataLoader(train_dataset, shuffle=shuffle, sampler=sampler, batch_size=args.batch_size)
@@ -179,8 +208,10 @@ def train(args):
         model = AlexNet2D(num_classes=n_classes)
     elif args.model == 'LeNet3D':
         model = LeNet3D(num_classes=n_classes)
-    elif args.model == 'ResNet3D':
-        model = ResNet3D(num_classes=n_classes)    
+    elif args.model == 'ResNet50':
+        model = resnet50(num_classes=n_classes)
+    elif args.model == 'ResNet152':
+        model = resnet152(num_classes=n_classes)
     else:
         raise NotImplementedError
         
@@ -204,8 +235,7 @@ def train(args):
     best_acc = 0
     best_epoch = -1
     for epoch in range(init_epoch, args.num_epoch):
-        
-        train_epoch(epoch, model, train_loader, optimizer, args)
+#         train_epoch(epoch, model, train_loader, optimizer, args)
         
         if scheduler:
             scheduler.step()
@@ -213,7 +243,7 @@ def train(args):
         logging.info('Learning rate: {}'.format(optimizer.state_dict()['param_groups'][0]['lr']))
         
         if epoch % args.test_print_every == 0:
-            current_acc = test_epoch(model, args, test_loader, 'Test')
+            current_acc = test_epoch(epoch, model, test_loader, args)
             if current_acc > best_acc:
                 save_model_epoch(model, args.save_dir, epoch, best_epoch)
                 best_acc, best_epoch = current_acc, epoch
