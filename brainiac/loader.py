@@ -60,7 +60,7 @@ class ADNIClassificationDataset(data.Dataset):
         self.frames_to_take = frames_to_take
         self.images_path = images_path
         self.train = train
-        self.std = torch.tensor([0.1])
+        self.std = torch.tensor([1.])
         self.levels = levels
 
 
