@@ -1,5 +1,5 @@
 ## 3D Convolutional Neural Networks for MRI Brain Classification
-![](./pics/brain.pdf)
+<img src='pics/brain.pdf' align="center"> 
 
 The code was written by [Natasha Basimova](https://github.com/pigunther), [Nikita Mokrov](https://github.com/Tismoney), [Ilya Selnitskiy](https://github.com/Silya-1) and [Ilya Zaharkin](https://github.com/izaharkin).
 
@@ -51,3 +51,7 @@ For example:
   - Use sampling (oversampling and undersampling): `--use_sampling True --sampling_type over`
   - Apply a pre-trained model: `--use_pretrain True --path_pretrain PATH`
   
+## Visualization 
+For visualization we use popular methond [GradCAM](https://arxiv.org/pdf/1610.02391.pdf) with [implementation](https://github.com/kazuto1011/grad-cam-pytorch). You can find it in notebook [Visualisation GradCAM](Visualisation_GradCAM.ipynb)
+
+<img src='pics/gradcam_gif_1.gif' width=176> <img src='pics/gradcam_gif_2.gif' width=176> <img src='pics/gradcam_gif_3.gif' width=176>  
