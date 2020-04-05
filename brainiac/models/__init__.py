@@ -1,4 +1,4 @@
-from .cnn import SimpleCNN
-from .alexnet import AlexNet2D, AlexNet3D
-from .lenet import LeNet3D
-from .resnet import ResNet3D
+from .cnn import *
+from .alexnet import *
+from .lenet import *
+from .resnet import *
