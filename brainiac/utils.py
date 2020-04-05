@@ -1,15 +1,16 @@
 import os
 import torch
-from torch.optim import Adam, RMSprop, SGD
+import argparse
 
-def get_optimizer(model, args):
-    if args.optimizer == 'Adam':
-        optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    elif args.optimizer == 'SGD':
-        optimizer = SGD(model.parameters(), momentum=0.9, lr=args.lr, weight_decay=args.weight_decay)
-    elif args.optimizer == 'RMSprop':
-        optimizer = RMSprop(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    return optimizer
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def save_model(model, path):
     torch.save(model.state_dict(), path)
@@ -24,7 +25,6 @@ def save_model_epoch(model, model_dir, current_epoch, last_best_epoch=None):
         old_model_state_file = os.path.join(model_dir, 'model_epoch{}.pth'.format(last_best_epoch))
         if os.path.exists(old_model_state_file):
             os.system('rm {}'.format(old_model_state_file))
-
     
 def load_model(model, path, device='cpu'):
     params = torch.load(path, map_location=device)

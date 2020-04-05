@@ -2,24 +2,17 @@ import argparse
 
 import os
 import random
-import pandas as pd
 import numpy as np
-import datetime
 
 import torch
 from torch import nn
 from torch.nn import functional as F
-from torch.utils.data import WeightedRandomSampler, DataLoader
-from torch.optim.lr_scheduler import MultiStepLR
 
-from brainiac.models import *
-from brainiac.loader import *
 from brainiac.utils import *
+from brainiac.train_utils import *
 from brainiac.log_helper import *
 
 import logging
-
-from sklearn.metrics import roc_auc_score, accuracy_score
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -45,9 +38,9 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float,
                         default=0.0001, help='Weight decay')
 
-    parser.add_argument('--use_augmentation', type=bool,
+    parser.add_argument('--use_augmentation', type=str2bool,
                         default=True, help='Use or not augmentation')
-    parser.add_argument('--use_sampling', type=bool,
+    parser.add_argument('--use_sampling', type=str2bool,
                         default=True, help='Use sampling or not')
     parser.add_argument('--sampling_type', type=str,
                         default='over', help='Type of sampling (over and under)')
@@ -57,7 +50,7 @@ def parse_args():
     parser.add_argument('--test_print_every', type=int,
                         default=1, help='Interval of logging in test')
     
-    parser.add_argument('--use_scheduler', type=bool,
+    parser.add_argument('--use_scheduler', type=str2bool,
                         default=False, help='Use scheduler or not')
     parser.add_argument('--scheduler_step', type=str,
                         default='[50, 100, 150]', help='Scheduler\'s steps')
@@ -67,10 +60,12 @@ def parse_args():
     parser.add_argument('--device', type=str,
                         default='cuda', help='Computing device')
     
-    parser.add_argument('--use_pretrain', type=bool,
+    parser.add_argument('--use_pretrain', type=str2bool,
                         default=False, help='Use pretrain model')
     parser.add_argument('--path_pretrain', type=str,
                         default=None, help='Path to pretrain model')
+    parser.add_argument('--pretrain_head', type=int,
+                        default=2, help='Num classes of pretrain model')
     
     parser.add_argument('--seed', type=int, default=42)
     
@@ -85,19 +80,7 @@ def parse_args():
     if args.device < 'cpu':
         args.device = 'cuda:' + args.device
     
-    return args
-
-def get_metrics(y_true, pred):
-    y_prob = np.exp(pred)
-    y_prob /= y_prob.sum(axis=1, keepdims=True)
-    y_pred = np.argmax(pred, axis=1)
-    
-    roc_auc = roc_auc_score(y_true, y_prob[:, 1])
-    acc = accuracy_score(y_true, y_pred)
-    correct = (y_true == y_pred).sum()
-    
-    return correct, acc, roc_auc
-    
+    return args    
 
 def train_epoch(epoch, model, data_loader, optimizer, args):
     model.train()
@@ -150,21 +133,6 @@ def test_epoch(epoch, model, data_loader, args):
     logging.info('Test Epoch: {:04d} | Average loss: {:.4f} | Accuracy: {}/{} ({:.3f}) | RocAuc: {:.3f}'.format(  
         epoch, test_loss, correct, num_samples, acc, roc_auc))
     return acc
-
-def make_sampler(labels, mode='over'):
-    class_sample_count = np.unique(labels, return_counts=True)[1]
-    weight = 1. / class_sample_count
-    samples_weight = weight[labels]
-    n_classes = len(class_sample_count)
-    if mode == 'over':
-        num_samples = max(class_sample_count) * n_classes
-    elif mode == 'under':
-        num_samples = min(class_sample_count) * n_classes
-    else:
-        raise NotImplementedError
-        
-    sampler = WeightedRandomSampler(samples_weight, int(num_samples), replacement=True)
-    return sampler
     
 
 def train(args):
@@ -177,64 +145,21 @@ def train(args):
     logging.info(args)
     
     logging.info('-'*20 + 'Data' + '-'*20)
-    
-    classes = eval(args.classes)
-    n_classes = len(classes)
-    df = pd.read_csv(args.data_path)
-    df_train, df_test = train_test_split_df(df, classes)
-    
-    logging.info(('\t{}'*n_classes).format(*classes))
-    logging.info(('Train' + '\t{}'*n_classes).format(*df_train['Group'].value_counts()[np.arange(n_classes)].values))
-    logging.info(('Test' + '\t{}'*n_classes).format(*df_test['Group'].value_counts()[np.arange(n_classes)].values))
-    
-    sampler = None
-    if args.use_sampling:
-        labels = df_train['Group'].values
-        sampler = make_sampler(labels, args.sampling_type)
-        
-    train_dataset = ADNIClassificationDataset(df_train, train=args.use_augmentation, images_path=args.images_path)
-    test_dataset = ADNIClassificationDataset(df_test, train=False, images_path=args.images_path)
-        
-    shuffle = True if sampler is None else False
-    train_loader = DataLoader(train_dataset, shuffle=shuffle, sampler=sampler, batch_size=args.batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
+    train_loader, test_loader, num_classes = make_data(args)
     
     logging.info('-'*20 + 'Model' + '-'*20)
-    if args.model == 'CNN':
-        model = SimpleCNN(num_classes=n_classes)
-    elif args.model == 'AlexNet3D':
-        model = AlexNet3D(num_classes=n_classes)
-    elif args.model == 'AlexNet2D':
-        model = AlexNet2D(num_classes=n_classes)
-    elif args.model == 'LeNet3D':
-        model = LeNet3D(num_classes=n_classes)
-    elif args.model == 'ResNet50':
-        model = resnet50(num_classes=n_classes)
-    elif args.model == 'ResNet152':
-        model = resnet152(num_classes=n_classes)
-    else:
-        raise NotImplementedError
-        
-    optimizer = get_optimizer(model, args)
+    model, init_epoch = make_model(args, num_classes)
     
-    scheduler = None
-    if args.use_scheduler:
-        scheduler = MultiStepLR(optimizer, gamma=args.scheduler_gamma,
-                               milestones=eval(args.scheduler_step))    
+    optimizer = get_optimizer(model, args)
+    scheduler = get_scheduler(optimizer, args)
     
     logging.info(model)
-    logging.info('-'*20 + 'Train' + '-'*20)
     
-    init_epoch = 0
-    if args.use_pretrain:
-        assert args.path_pretrain is not None
-        model, init_epoch = load_model(model, args.path_pretrain)
-        logging.info('Load model from {}. And start at {} epoch'.format(args.path_pretrain, init_epoch))
-        
+    logging.info('-'*20 + 'Train' + '-'*20)    
     model.to(args.device)
     best_acc = 0
     best_epoch = -1
-    for epoch in range(init_epoch, args.num_epoch):
+    for epoch in range(init_epoch, init_epoch + args.num_epoch):
         train_epoch(epoch, model, train_loader, optimizer, args)
         
         if scheduler:
