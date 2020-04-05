@@ -14,7 +14,7 @@ class SimpleCNN(nn.Module):
 #         self.pool2 = nn.MaxPool3d(kernel_size=3, stride=3)
         self.fl = nn.Flatten()
         self.fc1 = nn.Linear(183872, 1024)  # 98304 
-        self.fc2 = nn.Linear(1024, 1)
+        self.fc2 = nn.Linear(1024, num_classes)
         self.dropout = nn.Dropout(0.2)
 
 

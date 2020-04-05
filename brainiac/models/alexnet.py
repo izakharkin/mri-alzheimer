@@ -29,7 +29,7 @@ class AlexNet3D(nn.Module):
 #             nn.Dropout(),
             nn.Linear(4096, 4096),
             nn.ReLU(inplace=True),
-            nn.Linear(4096, 1),
+            nn.Linear(4096, num_classes),
         )
 
     def forward(self, x):
