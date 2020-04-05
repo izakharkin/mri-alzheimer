@@ -57,10 +57,13 @@ def make_data(args):
     if args.use_sampling:
         labels = df_train['Group'].values
         sampler = make_sampler(labels, args.sampling_type)
-        
-    train_dataset = ADNIClassificationDataset(df_train, train=args.use_augmentation, images_path=args.images_path)
-    test_dataset = ADNIClassificationDataset(df_test, train=False, images_path=args.images_path)
-        
+    if args.use_regression:
+        levels = np.linspace(0, 100, num_classes + 1)
+        train_dataset = ADNIRegressionDataset(df_train, train=args.use_augmentation, images_path=args.images_path, levels=levels)
+        test_dataset = ADNIRegressionDataset(df_test, train=False, images_path=args.images_path, levels=levels)
+    else:
+        train_dataset = ADNIClassificationDataset(df_train, train=args.use_augmentation, images_path=args.images_path)
+        test_dataset = ADNIClassificationDataset(df_test, train=False, images_path=args.images_path)
     shuffle = True if sampler is None else False
     train_loader = DataLoader(train_dataset, shuffle=shuffle, sampler=sampler, batch_size=args.batch_size)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size)
@@ -122,3 +125,9 @@ def get_scheduler(optimizer, args):
     else:
         scheduler = None
     return scheduler
+
+def get_pred_with_levels(outputs, mid_levels, args):
+    pred = torch.zeros(len(outputs)).to(args.device)
+    for i, output in enumerate(outputs):
+        pred[i] = torch.argmin(torch.abs(mid_levels - output))
+    return pred

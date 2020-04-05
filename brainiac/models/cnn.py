@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class SimpleCNN(nn.Module):
-    
+
     def __init__(self, num_classes=3):
         super(SimpleCNN, self).__init__()
         self.conv1 = nn.Conv3d(1, 64, kernel_size=7, stride=1, padding=1)
@@ -16,7 +16,7 @@ class SimpleCNN(nn.Module):
         self.fc1 = nn.Linear(183872, 1024)  # 98304 
         self.fc2 = nn.Linear(1024, num_classes)
         self.dropout = nn.Dropout(0.2)
-        
+
 
     def forward(self, out):
         out = self.dropout(self.pool1(F.relu(self.conv1(out))))
