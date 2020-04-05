@@ -6,7 +6,7 @@ from torch.optim import Adam, RMSprop, SGD
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import WeightedRandomSampler, DataLoader
 
-from sklearn.metrics import roc_auc_score, accuracy_score
+from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score
 
 from .models import *
 from .loader import *
@@ -18,7 +18,10 @@ def get_metrics(y_true, pred):
     y_prob /= y_prob.sum(axis=1, keepdims=True)
     y_pred = np.argmax(pred, axis=1)
     
-    roc_auc = roc_auc_score(y_true, y_prob[:, 1])
+    if y_prob.shape[1] == 2: #Binary classification
+        roc_auc = roc_auc_score(y_true, y_prob[:, 1])
+    else: #Balanced accuracy
+        roc_auc = balanced_accuracy_score(y_true, y_pred)
     acc = accuracy_score(y_true, y_pred)
     correct = (y_true == y_pred).sum()
     

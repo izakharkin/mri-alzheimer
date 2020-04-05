@@ -20,9 +20,7 @@ def parse_args():
     parser.add_argument('--model', type=str,
                         required=True, help='Network archetecture')
     parser.add_argument('--data_path', type=str,
-                        default='../ADNI-processed/data.csv', help='Full path to a data .csv file')
-    parser.add_argument('--images_path', type=str,
-                        default='../ADNI-processed/images/', help='Full path to a data .csv file')
+                        default='../ADNI-processed', help='Full path to a data .csv file')
     parser.add_argument('--classes', type=str,
                         default="['CN', 'AD']", help='Classes for experiment')
     
@@ -70,12 +68,15 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=42)
     
     args = parser.parse_args()
-
-    save_dir = 'trained_model/{}/classes-{}_optim-{}_aug-{}_sampling-{}_lr-{}_scheduler-{}_pretrain-{}/'.format(
-        args.model, '-'.join([str(i) for i in eval(args.classes)]),
+    
+    save_dir = 'trained_model/{}/{}-classes-{}_optim-{}_aug-{}_sampling-{}_lr-{}_scheduler-{}_pretrain-{}/'.format(
+        args.model, args.data_path, '-'.join([str(i) for i in eval(args.classes)]),
         args.optimizer, int(args.use_augmentation), int(args.use_sampling),
         args.lr, int(args.use_scheduler), int(args.use_sampling))
     args.save_dir = save_dir
+    
+    args.images_path = args.data_path + '/images/'
+    args.data_path = args.data_path + '/data.csv'
     
     if args.device < 'cpu':
         args.device = 'cuda:' + args.device
