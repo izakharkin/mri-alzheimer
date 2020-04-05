@@ -24,17 +24,20 @@ def parse_args():
     parser.add_argument('--classes', type=str,
                         default="['CN', 'AD']", help='Classes for experiment')
     
+    parser.add_argument('--use_regression', type=str2bool,
+                       default=False, help='Train regression model')
+    
     parser.add_argument('--num_epoch', type=int,
                         default=200, help='Number of epoch')
     parser.add_argument('--batch_size', type=int,
-                        default=2, help='Batch size')
+                        default=4, help='Batch size')
     parser.add_argument('--optimizer', type=str,
                         default='Adam', help='Optimizer',
                         choices=['Adam', 'SGD', 'RMSprop'])
     parser.add_argument('--lr', type=float,
-                        default=0.001, help='Learning rate')
+                        default=3e-5, help='Learning rate')
     parser.add_argument('--weight_decay', type=float,
-                        default=0.0001, help='Weight decay')
+                        default=1e-3, help='Weight decay')
 
     parser.add_argument('--use_augmentation', type=str2bool,
                         default=True, help='Use or not augmentation')
@@ -49,7 +52,7 @@ def parse_args():
                         default=1, help='Interval of logging in test')
     
     parser.add_argument('--use_scheduler', type=str2bool,
-                        default=False, help='Use scheduler or not')
+                        default=True, help='Use scheduler or not')
     parser.add_argument('--scheduler_step', type=str,
                         default='[50, 100, 150]', help='Scheduler\'s steps')
     parser.add_argument('--scheduler_gamma', type=float,
