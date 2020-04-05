@@ -1,5 +1,5 @@
 ## 3D Convolutional Neural Networks for MRI Brain Classification
-<img src='pics/brain.pdf' align="center"> 
+<img src='pics/brain.pdf' align="center" width=256> 
 
 The code was written by [Natasha Basimova](https://github.com/pigunther), [Nikita Mokrov](https://github.com/Tismoney), [Ilya Selnitskiy](https://github.com/Silya-1) and [Ilya Zaharkin](https://github.com/izaharkin).
 
@@ -26,6 +26,7 @@ cd mri-alzheimer
 ``` 
 - Install python 3.6 and all necessary requirements:
   - For pip users, please type the command `pip install -r requirements.txt`.
+  - Also you should install [fsl-lib](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki) for skull cutting
 
 ### Train/test models
 - For getting good perfomance of model, prepocess data by cutting skull and run:
