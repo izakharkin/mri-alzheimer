@@ -1,5 +1,6 @@
 ## 3D Convolutional Neural Networks for MRI Brain Classification
-<img src='pics/brain.pdf' align="center" width=256> 
+
+<img src='pics/brain.png' align="center" width=256> 
 
 The code was written by [Natasha Basimova](https://github.com/pigunther), [Nikita Mokrov](https://github.com/Tismoney), [Ilya Selnitskiy](https://github.com/Silya-1) and [Ilya Zakharkin](https://github.com/izaharkin).
 
