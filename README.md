@@ -1,7 +1,7 @@
 ## 3D Convolutional Neural Networks for MRI Brain Classification
 <img src='pics/brain.pdf' align="center" width=256> 
 
-The code was written by [Natasha Basimova](https://github.com/pigunther), [Nikita Mokrov](https://github.com/Tismoney), [Ilya Selnitskiy](https://github.com/Silya-1) and [Ilya Zaharkin](https://github.com/izaharkin).
+The code was written by [Natasha Basimova](https://github.com/pigunther), [Nikita Mokrov](https://github.com/Tismoney), [Ilya Selnitskiy](https://github.com/Silya-1) and [Ilya Zakharkin](https://github.com/izaharkin).
 
 ## Prerequisites
 - Linux or macOS
@@ -55,4 +55,6 @@ For example:
 ## Visualization 
 For visualization we use popular methond [GradCAM](https://arxiv.org/pdf/1610.02391.pdf) with [implementation](https://github.com/kazuto1011/grad-cam-pytorch). You can find it in notebook [Visualisation GradCAM](Visualisation_GradCAM.ipynb)
 
-<img src='pics/gradcam_gif_1.gif' width=176> <img src='pics/gradcam_gif_2.gif' width=176> <img src='pics/gradcam_gif_3.gif' width=176>  
+<p align="center">
+<img src='pics/gradcam_gif_1.gif' width=176> <img src='pics/gradcam_gif_2.gif' width=176> <img src='pics/gradcam_gif_3.gif' width=176>
+</p>
