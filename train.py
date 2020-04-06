@@ -73,10 +73,13 @@ def parse_args():
     args = parser.parse_args()
     
     save_dir = 'trained_model/{}/{}-classes-{}_optim-{}_aug-{}_sampling-{}_lr-{}_scheduler-{}_pretrain-{}/'.format(
-        args.model, args.data_path, '-'.join([str(i) for i in eval(args.classes)]),
+        args.model, args.data_path.split('/')[-1], '-'.join([str(i) for i in eval(args.classes)]),
         args.optimizer, int(args.use_augmentation), int(args.use_sampling),
-        args.lr, int(args.use_scheduler), int(args.use_sampling))
+        args.lr, int(args.use_scheduler), int(args.use_pretrain))
     args.save_dir = save_dir
+    
+    print(save_dir)
+    assert False
     
     args.images_path = args.data_path + '/images/'
     args.data_path = args.data_path + '/data.csv'
